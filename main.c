@@ -6,12 +6,15 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
+
+void init(void);
 
 int main(int argc, const char * argv[]) {
-    // insert code here...
-    printf("Hello, World!\n");
+    init();
     return 0;
 }
+
 FILE* open_file(const char *filename) {
     FILE *fptr = fopen(filename, "r");
     
@@ -21,4 +24,14 @@ FILE* open_file(const char *filename) {
     }
 
     return fptr;
+}
+
+void init(void) {
+    FILE *file = open_file("input.txt");
+    char line[100];
+    fgets(line, sizeof(line), file) ;
+    int nProc = line[0] - '0';
+    int nDisp = line[2] - '0';
+    printf("nProc: %d\n", nProc);
+    printf("nDisp: %d\n", nDisp);
 }
