@@ -4,6 +4,7 @@
 
 typedef enum State {
     NEW_READY,
+    READY,
     RUNNING,
     BLOCKED,
     TERMINATED
@@ -12,10 +13,10 @@ typedef enum State {
 typedef struct Process {
     int pid;
     int tInicio;
-    enum State state;
     int tCPU;
-
-    int PCB;
+    int pc;
+    int *program;
+    State state;
 } Process;
 
 Process createProcess(int pid, int tInicio);

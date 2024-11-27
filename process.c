@@ -12,6 +12,8 @@ Process createProcess(int pid, int tInicio) {
 void printState(State state) {
     if (state == NEW_READY) {
         printf("NEW_READY");
+    } else if (state == READY) {
+        printf("READY");
     } else if (state == RUNNING) {
         printf("RUNNING");
     } else if (state == BLOCKED) {
