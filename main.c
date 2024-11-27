@@ -7,6 +7,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 #include "fila.h"
 #include "process.h"
 #include "device.h"
@@ -27,6 +29,17 @@ FILE* openFile(const char *filename) {
     }
 
     return fptr;
+}
+
+bool isSimulationFinished(Fila *terminatedQueue, int nProc) {
+    if(tamanho(terminatedQueue) == nProc) {
+        return true;
+    }
+    return false;
+}
+
+void printOutput(int tCPU) {
+    printf("<%d>", tCPU);
 }
 
 void init(void) {
@@ -53,23 +66,39 @@ void init(void) {
     }
 
     Fila *readyQueue = cria();
+    Fila *terminatedQueue = cria();
 
     int pidCounter = 0;
-    Process processes[nProc];
+    Process processesTable[nProc];
     for(int i=0; i<nProc; i++) {
         fgets(line, sizeof(line), file);
         int tInicio = line[0] - '0';
+        int programLength = strlen(line)/2-1;
+        printf("\nprogramLength: %d", programLength);
+        // for(int i=2; i<strlen(line); i+=2) {
+        //     printf(" t: %d,", line[i] - '0');
+        // }
         Process process = createProcess(pidCounter, tInicio);
-        processes[i] = process;
+        process.program = (int*) malloc(programLength);
+        processesTable[i] = process;
         pidCounter++;
-        insere(readyQueue, &processes[i]);
+        insere(readyQueue, &processesTable[i]);
+
+        printf("\nprogram: ");
+        for(int i=0; i<sizeof(process.program); i++){
+            printf(" t: %d, ", process.program[i]);
+        }
     }
 
     for(int i=0; i<nProc; i++) {
-        Process process = processes[i];
+        Process process = processesTable[i];
         printf("\npid: %d, tInicio: %d", process.pid, process.tInicio);
     }
 
-    exibe(readyQueue);
+    int tCPU = 0;
+
+    // while(!isSimulationFinished(terminatedQueue, nProc)) {
+
+    // }
 
 }
