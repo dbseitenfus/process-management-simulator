@@ -12,3 +12,13 @@ int main(int argc, const char * argv[]) {
     printf("Hello, World!\n");
     return 0;
 }
+FILE* open_file(const char *filename) {
+    FILE *fptr = fopen(filename, "r");
+    
+    if(fptr == NULL) {
+      printf("Not able to open the file.");
+        return NULL;
+    }
+
+    return fptr;
+}
