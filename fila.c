@@ -89,3 +89,16 @@ void exibe(Fila* f) {
         atual = atual->prox;
     }
 }
+
+int tamanho(Fila* f) {
+    int count = 0;
+    No* atual = f->inicio;
+    
+    while (atual != NULL) {
+        count++;
+        atual = atual->prox;
+    }
+    
+    return count;
+}
+
