@@ -11,5 +11,5 @@ int vazia (Fila* f);
 void libera (Fila* f);
 void exibe(Fila* f);
 int tamanho(Fila* f);
-
+int possui(Fila *f, Process *process);
 #endif
