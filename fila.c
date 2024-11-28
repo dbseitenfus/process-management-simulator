@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "fila.h"
 #include "process.h"
 
@@ -43,8 +44,7 @@ void insere(Fila* f, Process *process) {
 // Retira um valor da fila
 Process* retira(Fila* f) {
     if (vazia(f)) {
-        printf("Erro: Fila vazia\n");
-        exit(1);
+        return NULL;
     }
     No* t = f->inicio;
     Process *process = t->process;
@@ -82,8 +82,8 @@ void exibe(Fila* f) {
     printf("\nConteúdo da fila:\n");
     while (atual != NULL) {
         Process* process = atual->process;
-        printf("PID: %d, tInicio: %d, tCPU: %d, Estado: ",
-               process->pid, process->tInicio, process->tCPU);
+        printf("PID: %d, tInicio: %d, Estado: ",
+               process->pid, process->tInicio);
         printState(process->state);
         printf("\n");
         atual = atual->prox;
@@ -100,5 +100,22 @@ int tamanho(Fila* f) {
     }
     
     return count;
+}
+
+int possui(Fila *f, Process *process) {
+    if (vazia(f)) {
+        return 0;
+    }
+
+    No* atual = f->inicio;
+    while (atual != NULL) {
+        Process* process = atual->process;
+        if(atual->process == process) {
+            return true;
+        }
+        atual = atual->prox;
+    }
+
+    return false;
 }
 
