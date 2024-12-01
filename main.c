@@ -237,7 +237,8 @@ void insertProcessInDeviceQueue(PCB *process, Device *device) {
     insere(device->queue, process);
 }
 
-void scheduleLongTerm(PCB *processesTable, PCB *scheduledProcess, Device *devicesTable, int *timeSlice, int nProc, int nDisp, int tCPU, Fila *readyQueue, Fila *terminatedQueue){
+int scheduleLongTerm(PCB *processesTable, PCB *scheduledProcess, Device *devicesTable, int timeSlice, int nProc, int nDisp, int tCPU, Fila *readyQueue, Fila *terminatedQueue){
+    int return_type = 0;
     for(int i=0; i<nProc; i++) {
         PCB *process = &processesTable[i];
         if(process->state == NEW_READY) {
@@ -250,7 +251,7 @@ void scheduleLongTerm(PCB *processesTable, PCB *scheduledProcess, Device *device
         Device *device = &devicesTable[i];
         PCB *process = device->process;
         if(process != NULL) {
-            if(process->tDevice == 0) {
+            if(process->tDevice <= 0) {
                 if(!isProcessEnd(process) && process->state != TERMINATED) { 
                     process->state = READY;
                     device->process->pc++;
@@ -272,12 +273,13 @@ void scheduleLongTerm(PCB *processesTable, PCB *scheduledProcess, Device *device
                 endProcess(scheduledProcess, tCPU, terminatedQueue);
             }
 
-            scheduledProcess = NULL;
-            timeSlice = 0;
+            return_type = 1;
         }
     }
 
     checkNewProcesses(processesTable, tCPU, nProc, readyQueue);
+
+    return return_type;
 }
 
 
@@ -326,7 +328,7 @@ void readProcesses(FILE *file, PCB *processesTable, int nProc, int nDisp) {
 }
 
 void init(void) {
-    FILE *file = openFile("input.txt");
+    FILE *file = openFile("input2.txt");
     char line[100];
     fgets(line, sizeof(line), file);
     int nProc = line[0] - '0';
@@ -354,7 +356,11 @@ void run(PCB *processesTable, int nProc, Device *devicesTable, int nDisp, Fila *
     while(!isSimulationFinished(processesTable, nProc)) {
 
         checkProcessEnd(processesTable, tCPU, nProc, terminatedQueue);
-        scheduleLongTerm(processesTable, scheduledProcess, devicesTable, &timeSlice, nProc, nDisp, tCPU, readyQueue, terminatedQueue);
+        int result = scheduleLongTerm(processesTable, scheduledProcess, devicesTable, timeSlice, nProc, nDisp, tCPU, readyQueue, terminatedQueue);
+        if(result == 1) {
+            scheduledProcess = NULL;
+            timeSlice = 0;
+        }
 
         if(scheduledProcess != NULL) {
             if(timeSlice >= 4) { 
@@ -390,6 +396,20 @@ void run(PCB *processesTable, int nProc, Device *devicesTable, int nDisp, Fila *
 void handleDevices(Device *devicesTable, int nDisp) {
     for(int i=0; i<nDisp; i++) {
         Device *device = &devicesTable[i];
+
+        // printf("\ndevice->process: ");
+        // if(device->process == NULL) {
+        //     printf("NULL");
+        // }else{
+        //     printf("pid: %d, td: %d", device->process->pid, device->process->tDevice);
+        // }
+
+        // printf(", fila vazia? ");
+        // if(vazia(device->queue)){
+        //     printf("sim");
+        // }else{
+        //     printf("nao");
+        // }
         
         if(device->process == NULL && !vazia(device->queue)) {
             device->process = retira(device->queue);
