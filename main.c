@@ -10,7 +10,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-
 typedef enum State {
     NEW_READY,
     READY,
@@ -19,7 +18,7 @@ typedef enum State {
     TERMINATED
 } State;
 
-typedef struct Process {
+typedef struct PCB {
     int pid;
     int tInicio;
     int pc;
@@ -30,13 +29,13 @@ typedef struct Process {
     int *deviceTime;
     int waitingTime;
     int tEnd;
-} Process;
+} PCB;
 
-Process createProcess(int pid, int tInicio, int cyclesLength, int nDisp);
+PCB createProcess(int pid, int tInicio, int cyclesLength, int nDisp);
 void printState(State state);
 
-Process createProcess(int pid, int tInicio, int cyclesLength, int nDisp) {
-    Process process;
+PCB createProcess(int pid, int tInicio, int cyclesLength, int nDisp) {
+    PCB process;
     process.pid = pid;
     process.tInicio = tInicio; 
     process.state = -1;
@@ -70,18 +69,14 @@ void printState(State state) {
 }
 
 typedef struct fila Fila;
-Fila* cria (void);
-void insere (Fila* f, Process *process);
-Process* retira (Fila* f);
+Fila* criar (void);
+void insere (Fila* f, PCB *process);
+PCB* retira (Fila* f);
 int vazia (Fila* f);
-void libera (Fila* f);
-void exibe(Fila* f);
-int tamanho(Fila* f);
-int possui(Fila *f, Process *process);
-
+int possui(Fila *f, PCB *process);
 
 typedef struct no {
-    Process *process;
+    PCB *process;
     struct no* prox;
 } No;
 
@@ -90,14 +85,14 @@ typedef struct fila {
     No* fim;
 } Fila;
 
-Fila* cria(void) {
+Fila* criar(void) {
     Fila* f = (Fila*)malloc(sizeof(Fila));
     f->inicio = NULL;
     f->fim = NULL;
     return f;
 }
 
-void insere(Fila* f, Process *process) {
+void insere(Fila* f, PCB *process) {
     No* novo = (No*)malloc(sizeof(No));
     if (novo == NULL) {
         printf("Erro de alocação de memória\n");
@@ -113,12 +108,12 @@ void insere(Fila* f, Process *process) {
     f->fim = novo;
 }
 
-Process* retira(Fila* f) {
+PCB* retira(Fila* f) {
     if (vazia(f)) {
         return NULL;
     }
     No* t = f->inicio;
-    Process *process = t->process;
+    PCB *process = t->process;
     f->inicio = t->prox;
     if (f->inicio == NULL) { 
         f->fim = NULL;
@@ -131,52 +126,14 @@ int vazia(Fila* f) {
     return (f->inicio == NULL);
 }
 
-void libera(Fila* f) {
-    No* atual = f->inicio;
-    while (atual != NULL) {
-        No* temp = atual->prox;
-        free(atual);
-        atual = temp;
-    }
-    free(f);
-}
-
-void exibe(Fila* f) {
-    if (vazia(f)) {
-        return;
-    }
-
-    No* atual = f->inicio;
-    while (atual != NULL) {
-        Process* process = atual->process;
-        printf("PID: %d, tInicio: %d, Estado: ",
-               process->pid, process->tInicio);
-        printState(process->state);
-        printf("\n");
-        atual = atual->prox;
-    }
-}
-
-int tamanho(Fila* f) {
-    int count = 0;
-    No* atual = f->inicio;
-    
-    while (atual != NULL) {
-        count++;
-        atual = atual->prox;
-    }
-    
-    return count;
-}
-
-int possui(Fila *f, Process *process) {
+int possui(Fila *f, PCB *process) {
     if (vazia(f)) {
         return 0;
     }
 
     No* atual = f->inicio;
     while (atual != NULL) {
-        Process* process = atual->process;
+        PCB* process = atual->process;
         if(atual->process == process) {
             return true;
         }
@@ -189,7 +146,7 @@ int possui(Fila *f, Process *process) {
 typedef struct Device {
     int attendanceTime;
     Fila *queue;
-    Process *process;
+    PCB *process;
 } Device;
 
 Device createDevice(int attendanceTime);
@@ -197,20 +154,23 @@ Device createDevice(int attendanceTime);
 Device createDevice(int attendanceTime) {
     Device device;
     device.attendanceTime = attendanceTime;
-    device.queue = cria();
+    device.queue = criar();
     device.process = NULL;
     return device;
 }
 
-
 void init(void);
 FILE* openFile(const char *filename);
-void checkNewProcesses(Process *processesTable, int tCPU, int nProc, Fila *readyQueue);
-bool isSimulationFinished(Process *processesTable, int nProc);
-void printOutput(int tCPU, Process *processesTable, Device *devices, int nProc, int nDisp);
-Process* scheduleShortTerm(Fila *readyQueue);
-bool isProcessEnd(Process *process);
-void endProcess(Process *process, int tCPU, Fila *terminatedQueue);
+void checkNewProcesses(PCB *processesTable, int tCPU, int nProc, Fila *readyQueue);
+bool isSimulationFinished(PCB *processesTable, int nProc);
+PCB* scheduleShortTerm(Fila *readyQueue);
+bool isProcessEnd(PCB *process);
+void endProcess(PCB *process, int tCPU, Fila *terminatedQueue);
+void run(PCB *processesTable, int nProc, Device *devicesTable, int nDisp, Fila *readyQueue, Fila *terminatedQueue);
+void handleDevices(Device *devicesTable, int nDisp);
+void printOutput(FILE *outputFile, int tCPU, PCB *processesTable, Device *devicesTable, int nProc, int nDisp);
+void printReport(FILE *outputFile, PCB *processTable, int tCPU, int nProc, int nDisp, int cpuIdleTime);
+void printStateToFile(FILE *outputFile, State state);
 
 int main(int argc, const char * argv[]) {
     init();
@@ -221,16 +181,16 @@ FILE* openFile(const char *filename) {
     FILE *fptr = fopen(filename, "r");
     
     if(fptr == NULL) {
-      printf("Not able to open the file.");
+      printf("\nNão foi possível abrir o arquivo.");
         return NULL;
     }
 
     return fptr;
 }
 
-bool isSimulationFinished(Process *processesTable, int nProc) {
+bool isSimulationFinished(PCB *processesTable, int nProc) {
     for(int i=0; i<nProc; i++) {
-        Process process = processesTable[i];
+        PCB process = processesTable[i];
         if(process.state != TERMINATED) {
             return false;
         }
@@ -239,67 +199,47 @@ bool isSimulationFinished(Process *processesTable, int nProc) {
     return true;
 }
 
-void printOutput(int tCPU, Process *processesTable, Device *devices, int nProc, int nDisp) {
-    printf("\n<%02d> |", tCPU);
+void checkNewProcesses(PCB *processesTable, int tCPU, int nProc, Fila *readyQueue) {
     for(int i=0; i<nProc; i++) {
-        Process *process = &processesTable[i];
-        printf(" P%02d ", process->pid);
-        printf("state: ");
-        printState(process->state);
-        if(process->state == BLOCKED) {
-            int deviceId = process->cycles[process->pc];
-            if(possui(devices[deviceId-1].queue, process)){
-                printf(" queue");
-            }
-            printf(" d%d", deviceId);
-        }
-        printf(" |");
-    }
-}
-
-void checkNewProcesses(Process *processesTable, int tCPU, int nProc, Fila *readyQueue) {
-    for(int i=0; i<nProc; i++) {
-        Process *process = &processesTable[i];
-        if(process->state == -1) {
-            if(process->tInicio == tCPU) {
-                process->state = NEW_READY;
-            }
+        PCB *process = &processesTable[i];
+        if(process->state == -1 && process->tInicio == tCPU) {
+            process->state = NEW_READY;
         }
     }
 }
 
-Process* scheduleShortTerm(Fila *readyQueue) {
-    Process *scheduledProcess = retira(readyQueue);
+PCB* scheduleShortTerm(Fila *readyQueue) {
+    PCB *scheduledProcess = retira(readyQueue);
     if(scheduledProcess != NULL) scheduledProcess->state = RUNNING;
     return scheduledProcess;
 }
 
-bool isProcessEnd(Process *process) {
+bool isProcessEnd(PCB *process) {
     return process->pc >= process->cyclesLength-1;
 }
 
-void endProcess(Process *process, int tCPU, Fila *terminatedQueue) {
+void endProcess(PCB *process, int tCPU, Fila *terminatedQueue) {
     process->state = TERMINATED;
     process->tEnd = tCPU;
     insere(terminatedQueue, process);
 }
 
-void checkProcessEnd(Process *processTable, int tCPU, int nProc, Fila *terminatedQueue) {
+void checkProcessEnd(PCB *processTable, int tCPU, int nProc, Fila *terminatedQueue) {
     for(int i=0; i<nProc; i++) {
-        Process *process = &processTable[i];
+        PCB *process = &processTable[i];
         if(isProcessEnd(process) && process->state != TERMINATED) { 
             endProcess(process, tCPU, terminatedQueue);
         }
     }
 }
 
-void insertProcessInDeviceQueue(Process *process, Device *device) {
+void insertProcessInDeviceQueue(PCB *process, Device *device) {
     insere(device->queue, process);
 }
 
-void scheduleLongTerm(Process *processesTable, Process *scheduledProcess, Device *devices, int *timeSlice, int nProc, int nDisp, int tCPU, Fila *readyQueue, Fila *terminatedQueue){
+void scheduleLongTerm(PCB *processesTable, PCB *scheduledProcess, Device *devicesTable, int *timeSlice, int nProc, int nDisp, int tCPU, Fila *readyQueue, Fila *terminatedQueue){
     for(int i=0; i<nProc; i++) {
-        Process *process = &processesTable[i];
+        PCB *process = &processesTable[i];
         if(process->state == NEW_READY) {
             process->state = READY;
             insere(readyQueue, process);
@@ -307,11 +247,11 @@ void scheduleLongTerm(Process *processesTable, Process *scheduledProcess, Device
     }
 
     for(int i=0; i<nDisp; i++) {
-        Device *device = &devices[i];
-        Process *process = device->process;
+        Device *device = &devicesTable[i];
+        PCB *process = device->process;
         if(process != NULL) {
-            if(process->tDevice == 0) { //se chegou no tempo de atendimento
-                if(!isProcessEnd(process) && process->state != TERMINATED) { //acho que isso não pode ocorrer aqui.
+            if(process->tDevice == 0) {
+                if(!isProcessEnd(process) && process->state != TERMINATED) { 
                     process->state = READY;
                     device->process->pc++;
                     insere(readyQueue, device->process);
@@ -321,49 +261,29 @@ void scheduleLongTerm(Process *processesTable, Process *scheduledProcess, Device
         }
     }
     if(scheduledProcess != NULL) {
-        if(scheduledProcess->cycles[scheduledProcess->pc] == 0) { //verifica se o processo usou o tCPU que ele queria
-            //entrega ao device
+        if(scheduledProcess->cycles[scheduledProcess->pc] == 0) { 
             if(!isProcessEnd(scheduledProcess)) {
                 scheduledProcess->pc++;
                 int deviceId = scheduledProcess->cycles[scheduledProcess->pc];
-                Device *device = &devices[deviceId-1];
+                Device *device = &devicesTable[deviceId-1];
                 insertProcessInDeviceQueue(scheduledProcess, device);
-
-                scheduledProcess->state = BLOCKED; //?
+                scheduledProcess->state = BLOCKED;
             } else {
                 endProcess(scheduledProcess, tCPU, terminatedQueue);
             }
 
             scheduledProcess = NULL;
             timeSlice = 0;
-
         }
     }
-    
 
     checkNewProcesses(processesTable, tCPU, nProc, readyQueue);
 }
 
-void printReport(Process *processTable, int tCPU, int nProc, int nDisp, int cpuIdleTime) {
+
+void calculateStatistics(PCB *processTable, int nProc) {
     for(int i=0; i<nProc; i++) {
-        Process process = processTable[i];
-        printf("\n| P%02d ", process.pid);
-
-        for(int j=0; j<nDisp; j++) {
-            printf(" device time d%d: %d,", j+1, process.deviceTime[j]);
-        }
-
-        printf(" waiting time: %d, ", process.waitingTime);
-        printf("throughput: %d", process.tEnd - process.tInicio);
-
-    }
-
-    printf("\nCPU idle time: %d", cpuIdleTime);
-}
-
-void calculateStatistics(Process *processTable, int nProc) {
-    for(int i=0; i<nProc; i++) {
-        Process *process = &processTable[i];
+        PCB *process = &processTable[i];
         if(process->state == READY) {
             process->waitingTime++;
         }else if(process->state == BLOCKED) {
@@ -372,38 +292,28 @@ void calculateStatistics(Process *processTable, int nProc) {
     }
 }
 
-void preemptProcess(Process *process, int tCPU, Fila *readyQueue, Fila *terminatedQueue) {
+void preemptProcess(PCB *process, int tCPU, Fila *readyQueue, Fila *terminatedQueue) {
     process->state = READY;
-    insere(readyQueue, process); //acho que isso não pode ocorrer aqui. o processo pode ter atingido a fatia de tempo e terminado. isso significa que ele não pode entrar novamente na fila de ready
+    insere(readyQueue, process);
 }
 
-
-
-void init(void) {
-    FILE *file = openFile("input.txt");
-    char line[100];
-    fgets(line, sizeof(line), file);
-    int nProc = line[0] - '0';
-    int nDisp = line[2] - '0';
-
-    Device devices[nDisp];
+void readDevices(Device *devicesTable, int nDisp, char line[100]) {
     int deviceTimeIndex = 4;
     for(int i=0; i<nDisp; i++) {
         int attendanceTime = line[deviceTimeIndex] - '0';
-        devices[i] = createDevice(attendanceTime);
+        devicesTable[i] = createDevice(attendanceTime);
         deviceTimeIndex += 2;
     }
+}
 
-    Fila *readyQueue = cria();
-    Fila *terminatedQueue = cria();
-
+void readProcesses(FILE *file, PCB *processesTable, int nProc, int nDisp) {
+    char line[100];
     int pidCounter = 1;
-    Process processesTable[nProc];
     for(int i=0; i<nProc; i++) {
         fgets(line, sizeof(line), file);
         int tInicio = line[0] - '0';
         int cyclesLength = strlen(line)/2-1;        
-        Process process = createProcess(pidCounter, tInicio, cyclesLength, nDisp);
+        PCB process = createProcess(pidCounter, tInicio, cyclesLength, nDisp);
         process.cycles = (int*) malloc(cyclesLength * sizeof(int));
         int cyclesIndex = 0;
         for(int i=2; i<strlen(line); i+=2) {
@@ -413,58 +323,136 @@ void init(void) {
         processesTable[i] = process;
         pidCounter++;
     }
+}
 
-    printf("\n\n---------Início da simulação ---------\n");
+void init(void) {
+    FILE *file = openFile("input.txt");
+    char line[100];
+    fgets(line, sizeof(line), file);
+    int nProc = line[0] - '0';
+    int nDisp = line[2] - '0';
+
+    Device devicesTable[nDisp];
+    readDevices(devicesTable, nDisp, line);
+
+    Fila *readyQueue = criar();
+    Fila *terminatedQueue = criar();
+
+    PCB processesTable[nProc];
+    readProcesses(file, processesTable, nProc, nDisp);
+
+    run(processesTable, nProc, devicesTable, nDisp, readyQueue, terminatedQueue);
+}
+
+void run(PCB *processesTable, int nProc, Device *devicesTable, int nDisp, Fila *readyQueue, Fila *terminatedQueue) {
+    FILE *outputFile = fopen("output.txt", "w");
     int tCPU = 0;
     int timeSlice = 0;
     int cpuIdleTime = 0;
-    Process *scheduledProcess;
+    PCB *scheduledProcess = NULL;
+
     while(!isSimulationFinished(processesTable, nProc)) {
 
-      
-        
         checkProcessEnd(processesTable, tCPU, nProc, terminatedQueue);
-        scheduleLongTerm(processesTable, scheduledProcess, devices, &timeSlice, nProc, nDisp, tCPU, readyQueue, terminatedQueue);
+        scheduleLongTerm(processesTable, scheduledProcess, devicesTable, &timeSlice, nProc, nDisp, tCPU, readyQueue, terminatedQueue);
 
         if(scheduledProcess != NULL) {
-            if(timeSlice >= 4) { //verifica se ele já usou toda fatia dele
+            if(timeSlice >= 4) { 
                 preemptProcess(scheduledProcess, tCPU, readyQueue, terminatedQueue);
                 timeSlice = 0;
                 scheduledProcess = NULL;
             } 
         }
 
-        if(scheduledProcess == NULL || scheduledProcess->state != RUNNING) { //nao tem processo e verifica se há processo para scalonar
-            scheduledProcess = scheduleShortTerm(readyQueue); //TODO: Aqui verificar se o processo é diferente 
+        if(scheduledProcess == NULL || scheduledProcess->state != RUNNING) { 
+            scheduledProcess = scheduleShortTerm(readyQueue); 
             timeSlice = 0;
         }
 
-        if(scheduledProcess != NULL) { //tem processo para executar
+        if(scheduledProcess != NULL) { 
             scheduledProcess->cycles[scheduledProcess->pc]--;
             timeSlice++;
         } else {
             cpuIdleTime++;
         }
 
-        //ALTERAR: A inserção na fila ready se dá verificando os processos que se encontram em estado “new/ready”, nas filas de dispositivos e na CPU (nesta ordem).
-
-        for(int i=0; i<nDisp; i++) {
-            Device *device = &devices[i];
-            
-            if(device->process == NULL && !vazia(device->queue)) { // se não tem processo usando o device e tem algum na fila
-                device->process = retira(device->queue);
-                device->process->tDevice = device->attendanceTime;
-            }
-            
-            if(device->process != NULL){
-                device->process->tDevice--;
-            }
-        }
+        handleDevices(devicesTable, nDisp);
+        
         calculateStatistics(processesTable, nProc);
-        printOutput(tCPU, processesTable, devices, nProc, nDisp);
+        printOutput(outputFile, tCPU, processesTable, devicesTable, nProc, nDisp);
 
         tCPU++;
     }
 
-    printReport(processesTable, tCPU, nProc, nDisp, cpuIdleTime);
+    printReport(outputFile, processesTable, tCPU, nProc, nDisp, cpuIdleTime);
+}
+
+void handleDevices(Device *devicesTable, int nDisp) {
+    for(int i=0; i<nDisp; i++) {
+        Device *device = &devicesTable[i];
+        
+        if(device->process == NULL && !vazia(device->queue)) {
+            device->process = retira(device->queue);
+            device->process->tDevice = device->attendanceTime;
+        }
+        
+        if(device->process != NULL){
+            device->process->tDevice--;
+        }
+    }
+}
+
+void printOutput(FILE *outputFile, int tCPU, PCB *processesTable, Device *devicesTable, int nProc, int nDisp) {
+    if(tCPU == 0) {
+        fprintf(outputFile, "<%02d> |", tCPU);
+    } else {
+        fprintf(outputFile, "\n<%02d> |", tCPU);
+    }
+    
+    for(int i=0; i<nProc; i++) {
+        PCB *process = &processesTable[i];
+        fprintf(outputFile, " P%02d ", process->pid);
+        fprintf(outputFile, "state: ");
+        printStateToFile(outputFile, process->state);
+        if(process->state == BLOCKED) {
+            int deviceId = process->cycles[process->pc];
+            if(possui(devicesTable[deviceId-1].queue, process)){
+                fprintf(outputFile, " queue");
+            }
+            fprintf(outputFile, " d%d", deviceId);
+        }
+        fprintf(outputFile, " |");
+    }
+}
+
+void printReport(FILE *outputFile, PCB *processTable, int tCPU, int nProc, int nDisp, int cpuIdleTime) {
+    for(int i=0; i<nProc; i++) {
+        PCB process = processTable[i];
+        fprintf(outputFile, "\n| P%02d ", process.pid);
+
+        for(int j=0; j<nDisp; j++) {
+            fprintf(outputFile, " device time d%d: %d,", j+1, process.deviceTime[j]);
+        }
+
+        fprintf(outputFile, " waiting time: %d, ", process.waitingTime);
+        fprintf(outputFile, "throughput: %d", process.tEnd - process.tInicio);
+    }
+
+    fprintf(outputFile, "\nCPU idle time: %d", cpuIdleTime);
+}
+
+void printStateToFile(FILE *outputFile, State state) {
+    if (state == NEW_READY) {
+        fprintf(outputFile, "new_ready");
+    } else if (state == READY) {
+        fprintf(outputFile, "ready");
+    } else if (state == RUNNING) {
+        fprintf(outputFile, "running");
+    } else if (state == BLOCKED) {
+        fprintf(outputFile, "blocked");
+    } else if (state == TERMINATED) {
+        fprintf(outputFile, "terminated");
+    } else {
+        fprintf(outputFile, "--");
+    }
 }
