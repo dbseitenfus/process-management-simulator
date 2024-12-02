@@ -10,154 +10,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-typedef enum State {
-    NEW_READY,
-    READY,
-    RUNNING,
-    BLOCKED,
-    TERMINATED
-} State;
-
-typedef struct PCB {
-    int pid;
-    int tInicio;
-    int pc;
-    int cyclesLength;
-    int *cycles;
-    State state;
-    int tDevice;
-    int *deviceTime;
-    int waitingTime;
-    int tEnd;
-} PCB;
-
-PCB createProcess(int pid, int tInicio, int cyclesLength, int nDisp);
-void printState(State state);
-
-PCB createProcess(int pid, int tInicio, int cyclesLength, int nDisp) {
-    PCB process;
-    process.pid = pid;
-    process.tInicio = tInicio; 
-    process.state = -1;
-    process.pc = 0;
-    process.cyclesLength = cyclesLength;
-    process.tDevice = 0;
-
-    process.deviceTime = (int*) malloc(nDisp * sizeof(int));
-    for(int i=0; i<nDisp; i++) {
-        process.deviceTime[i] = 0;
-    }
-    process.waitingTime = 0;
-    process.tEnd = 0;
-    return process;
-}
-
-void printState(State state) {
-    if (state == NEW_READY) {
-        printf("new_ready");
-    } else if (state == READY) {
-        printf("ready");
-    } else if (state == RUNNING) {
-        printf("running");
-    } else if (state == BLOCKED) {
-        printf("blocked");
-    } else if (state == TERMINATED) {
-        printf("terminated");
-    } else {
-        printf("--");
-    }
-}
-
-typedef struct fila Fila;
-Fila* criar (void);
-void insere (Fila* f, PCB *process);
-PCB* retira (Fila* f);
-int vazia (Fila* f);
-int possui(Fila *f, PCB *process);
-
-typedef struct no {
-    PCB *process;
-    struct no* prox;
-} No;
-
-typedef struct fila {
-    No* inicio;
-    No* fim;
-} Fila;
-
-Fila* criar(void) {
-    Fila* f = (Fila*)malloc(sizeof(Fila));
-    f->inicio = NULL;
-    f->fim = NULL;
-    return f;
-}
-
-void insere(Fila* f, PCB *process) {
-    No* novo = (No*)malloc(sizeof(No));
-    if (novo == NULL) {
-        printf("Erro de alocação de memória\n");
-        exit(1);
-    }
-    novo->process = process;
-    novo->prox = NULL;
-    if (f->fim != NULL) {
-        f->fim->prox = novo;
-    } else {
-        f->inicio = novo;
-    }
-    f->fim = novo;
-}
-
-PCB* retira(Fila* f) {
-    if (vazia(f)) {
-        return NULL;
-    }
-    No* t = f->inicio;
-    PCB *process = t->process;
-    f->inicio = t->prox;
-    if (f->inicio == NULL) { 
-        f->fim = NULL;
-    }
-    free(t);
-    return process;
-}
-
-int vazia(Fila* f) {
-    return (f->inicio == NULL);
-}
-
-int possui(Fila *f, PCB *process) {
-    if (vazia(f)) {
-        return 0;
-    }
-
-    No* atual = f->inicio;
-    while (atual != NULL) {
-        PCB* process = atual->process;
-        if(atual->process == process) {
-            return true;
-        }
-        atual = atual->prox;
-    }
-
-    return false;
-}
-
-typedef struct Device {
-    int attendanceTime;
-    Fila *queue;
-    PCB *process;
-} Device;
-
-Device createDevice(int attendanceTime);
-
-Device createDevice(int attendanceTime) {
-    Device device;
-    device.attendanceTime = attendanceTime;
-    device.queue = criar();
-    device.process = NULL;
-    return device;
-}
+#include "pcb.h"
+#include "fila.h"
+#include "device.h"
 
 void init(void);
 FILE* openFile(const char *filename);
@@ -328,7 +183,7 @@ void readProcesses(FILE *file, PCB *processesTable, int nProc, int nDisp) {
 }
 
 void init(void) {
-    FILE *file = openFile("input.txt");
+    FILE *file = openFile("input1.txt");
     char line[100];
     fgets(line, sizeof(line), file);
     int nProc = line[0] - '0';
@@ -347,7 +202,7 @@ void init(void) {
 }
 
 void run(PCB *processesTable, int nProc, Device *devicesTable, int nDisp, Fila *readyQueue, Fila *terminatedQueue) {
-    FILE *outputFile = fopen("output.txt", "w");
+    FILE *outputFile = fopen("output1.txt", "w");
     int tCPU = 0;
     int timeSlice = 0;
     int cpuIdleTime = 0;
