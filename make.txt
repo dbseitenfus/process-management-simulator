@@ -1,4 +1,0 @@
-gcc fila.c -o fila.o -c
-gcc process.c -o process.o -c
-gcc main.c -o main.o -c
-gcc -o main main.o fila.o process.o
